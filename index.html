@@ -3,161 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta - Mamá</title>
+    <title>Calculadora de Productos</title>
     <link rel="icon" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
+    <meta name="theme-color" content="#00a8cc">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
-        .contenedor { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
-        label { font-weight: bold; display: block; margin-top: 15px; }
-        input, select, button { width: 100%; margin-top: 5px; padding: 10px; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; }
-        button { background-color: #007bff; color: white; font-weight: bold; border: none; cursor: pointer; margin-top: 15px; }
-        button:hover { background-color: #0056b3; }
-        .btn-limpiar { background-color: #dc3545; margin-top: 10px; }
-        .btn-limpiar:hover { background-color: #c82333; }
-        .estado-api { font-size: 0.8em; color: #666; margin-top: 5px; text-align: right; }
+        /* Estilos Generales y Colores */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 15px; 
+            background-color: #e0f7fa; /* Fondo azul clarito de limpieza */
+            color: #333;
+            margin: 0;
+        }
+        .contenedor { 
+            max-width: 400px; 
+            margin: auto; 
+            background: white; 
+            padding: 25px 20px; 
+            border-radius: 15px; 
+            box-shadow: 0px 8px 20px rgba(0,0,0,0.1); 
+        }
+        h2 { text-align: center; color: #008c9e; margin-top: 0; font-size: 1.6em; }
         
-        /* Estilos para la lista de compras */
-        #lista-compras { list-style-type: none; padding: 0; margin-top: 20px; border-top: 2px solid #eee; }
-        #lista-compras li { padding: 10px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        /* Controles de entrada */
+        label { font-weight: bold; display: block; margin-top: 15px; color: #555; font-size: 0.9em; }
+        input, select { 
+            width: 100%; margin-top: 5px; padding: 12px; box-sizing: border-box; 
+            border-radius: 8px; border: 2px solid #b2ebf2; 
+            font-size: 1em; background-color: #fcfcfc; transition: border 0.3s;
+        }
+        input:focus, select:focus { border-color: #00a8cc; outline: none; }
         
-        #totales { font-size: 1.2em; font-weight: bold; margin-top: 20px; color: #333; padding: 15px; background-color: #e2e3e5; border-radius: 5px; text-align: right; }
-        .total-bs { color: #28a745; font-size: 1.1em; }
+        /* Botones */
+        button { 
+            width: 100%; padding: 14px; margin-top: 20px; border: none; 
+            border-radius: 8px; font-weight: bold; font-size: 1.1em; 
+            cursor: pointer; transition: transform 0.1s, background 0.3s;
+        }
+        button:active { transform: scale(0.98); }
+        .btn-agregar { background-color: #00a8cc; color: white; box-shadow: 0 4px 10px rgba(0, 168, 204, 0.3); }
+        .btn-agregar:hover { background-color: #008c9e; }
+        .btn-capture { background-color: #28a745; color: white; margin-top: 15px; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); }
+        .btn-limpiar { background-color: #ff6b6b; color: white; margin-top: 10px; }
+        
+        .estado-api { font-size: 0.8em; margin-top: 5px; text-align: right; font-weight: bold; }
+
+        /* --- ZONA DEL RECIBO (Lo que saldrá en la foto) --- */
+        #zona-factura {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            /* Le damos un toque de "ticket" con sombra interna */
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+            position: relative;
+        }
+        .header-factura { text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; }
+        .header-factura h3 { margin: 0; color: #333; font-size: 1.4em; }
+        .header-factura p { margin: 5px 0 0 0; font-size: 0.9em; color: #777; }
+        
+        #lista-compras { list-style-type: none; padding: 0; margin: 0; }
+        #lista-compras li { padding: 8px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; font-size: 0.95em; }
+        
+        .totales-factura { margin-top: 15px; border-top: 2px dashed #ccc; padding-top: 15px; text-align: right; font-size: 1.2em; font-weight: bold; color: #222; }
+        .total-bs { color: #008c9e; font-size: 1.2em; display: block; margin-top: 5px; }
+        
+        /* Mensaje de gracias */
+        .footer-factura { text-align: center; font-size: 0.8em; color: #888; margin-top: 15px; font-style: italic; }
     </style>
 </head>
 <body>
 
     <div class="contenedor">
-        <h2>Calculadora de Pedidos</h2>
+        <h2>✨ Productos de Limpieza</h2>
 
         <label for="tasaBcv">Tasa BCV (Bs/$):</label>
         <input type="number" id="tasaBcv" step="0.01" placeholder="Cargando tasa..." onchange="actualizarTotales()">
-        <div id="estadoApi" class="estado-api">Conectando con el BCV...</div>
+        <div id="estadoApi" class="estado-api">Conectando...</div>
 
         <label for="producto">Producto:</label>
         <select id="producto">
-            <option value="1.80">Jabón Líquido ($1.80 / Litro)</option>
-            <option value="2.00">Suavizante ($2.00 / Litro)</option>
-            <option value="2.00">Desengrasante ($2.00 / Litro)</option>
-            <option value="0.80">Cloro ($0.80 / Litro)</option>
-            <option value="0.90">Desinfectante ($0.90 / Litro)</option>
-            <option value="2.00">Cera ($2.00 / Litro)</option>
+            <option value="1.80">Jabón Líquido ($1.80 / L)</option>
+            <option value="2.00">Suavizante ($2.00 / L)</option>
+            <option value="2.00">Desengrasante ($2.00 / L)</option>
+            <option value="0.80">Cloro ($0.80 / L)</option>
+            <option value="0.90">Desinfectante ($0.90 / L)</option>
+            <option value="2.00">Cera ($2.00 / L)</option>
         </select>
 
-        <label for="litros">Cantidad de Litros:</label>
-        <input type="number" id="litros" step="0.1" placeholder="Ej: 0.5 para medio litro">
+        <label for="litros">Cantidad (Litros):</label>
+        <input type="number" id="litros" step="0.5" placeholder="Ej: 1.5">
 
-        <button onclick="agregarAlCarrito()">➕ Agregar a la cuenta</button>
+        <button class="btn-agregar" onclick="agregarAlCarrito()">➕ Agregar al Pedido</button>
 
-        <ul id="lista-compras"></ul>
+        <div id="zona-factura">
+            <div class="header-factura">
+                <h3>Total</h3>
+                <p id="fecha-hoy">Fecha: --/--/----</p>
+                <p style="font-size: 0.85em; color:#008c9e;">Tasa BCV calculada: Bs. <span id="mostrar-tasa">0.00</span></p>
+            </div>
 
-        <div id="totales">
-            Total USD: $0.00 <br>
-            <span class="total-bs">Total Bs: 0.00</span>
+            <ul id="lista-compras">
+                <li style="color: #999; text-align: center; display: block;">Aún no hay productos agregados</li>
+            </ul>
+
+            <div class="totales-factura">
+                Total USD: $<span id="total-usd">0.00</span>
+                <span class="total-bs">Total Bs: <span id="total-bs">0.00</span></span>
+            </div>
+            
+            <div class="footer-factura">¡Gracias por su preferencia! 🧼✨</div>
         </div>
 
+        <button class="btn-capture" onclick="generarCapture()">📸 Descargar Factura (Imagen)</button>
         <button class="btn-limpiar" onclick="limpiarCuenta()">🗑️ Nueva Venta (Borrar todo)</button>
     </div>
 
     <script>
-        // Arreglo para guardar los productos que se van sumando
         let carrito = [];
 
-        // Función para obtener el BCV automáticamente
+        // Poner la fecha de hoy automáticamente
+        function ponerFecha() {
+            const hoy = new Date();
+            const fechaFormateada = hoy.toLocaleDateString('es-VE'); // Formato día/mes/año
+            document.getElementById('fecha-hoy').innerText = `Fecha: ${fechaFormateada}`;
+        }
+        ponerFecha();
+
         async function obtenerTasaBCV() {
             const inputTasa = document.getElementById('tasaBcv');
             const estadoApi = document.getElementById('estadoApi');
 
             try {
                 const respuesta = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
-                if (!respuesta.ok) throw new Error('Error en la red');
+                if (!respuesta.ok) throw new Error('Error de red');
                 const datos = await respuesta.json();
                 
                 inputTasa.value = datos.promedio;
-                estadoApi.innerHTML = "✅ Tasa BCV actualizada";
-                estadoApi.style.color = "green";
-                // Si ya hay cosas en el carrito, actualiza los bolívares con la nueva tasa
+                estadoApi.innerHTML = "✅ Tasa Actualizada";
+                estadoApi.style.color = "#28a745";
                 actualizarTotales(); 
             } catch (error) {
-                console.error("Error obteniendo la tasa:", error);
-                estadoApi.innerHTML = "❌ Error. Ingresa la tasa manual.";
-                estadoApi.style.color = "red";
+                estadoApi.innerHTML = "❌ Ingresa manual";
+                estadoApi.style.color = "#dc3545";
             }
         }
 
         obtenerTasaBCV();
 
-        // Función principal: Agregar al carrito
         function agregarAlCarrito() {
             const selectProducto = document.getElementById('producto');
             const litrosInput = document.getElementById('litros');
             
-            const precioPorLitro = parseFloat(selectProducto.value);
+            const precio = parseFloat(selectProducto.value);
             const litros = parseFloat(litrosInput.value);
-            // Obtenemos el nombre del producto seleccionado (ej: "Cloro")
-            const nombreProducto = selectProducto.options[selectProducto.selectedIndex].text.split(" (")[0];
+            const nombre = selectProducto.options[selectProducto.selectedIndex].text.split(" ($")[0];
 
             if (isNaN(litros) || litros <= 0) {
-                alert("Por favor, ingresa una cantidad válida de litros (ej: 0.5 o 1).");
+                alert("Ingresa una cantidad válida.");
                 return;
             }
 
-            const subtotal = precioPorLitro * litros;
-
-            // Guardamos el producto en nuestro arreglo (memoria)
-            carrito.push({
-                nombre: nombreProducto,
-                cantidad: litros,
-                subtotal: subtotal
-            });
-
-            // Limpiamos el input de litros para el siguiente producto
+            carrito.push({ nombre: nombre, cantidad: litros, subtotal: precio * litros });
             litrosInput.value = '';
             
-            // Actualizamos la pantalla
             mostrarCarrito();
             actualizarTotales();
         }
 
-        // Función para mostrar la lista en el HTML
         function mostrarCarrito() {
             const listaHTML = document.getElementById('lista-compras');
-            listaHTML.innerHTML = ''; // Limpiamos la lista antes de volver a pintarla
+            listaHTML.innerHTML = ''; 
+
+            if (carrito.length === 0) {
+                listaHTML.innerHTML = '<li style="color: #999; text-align: center; display: block;">Aún no hay productos agregados</li>';
+                return;
+            }
 
             carrito.forEach(item => {
                 const li = document.createElement('li');
-                li.innerHTML = `<span>${item.cantidad}L de ${item.nombre}</span> <span>$${item.subtotal.toFixed(2)}</span>`;
+                li.innerHTML = `<span><b>${item.cantidad}L</b> de ${item.nombre}</span> <span>$${item.subtotal.toFixed(2)}</span>`;
                 listaHTML.appendChild(li);
             });
         }
 
-        // Función para calcular y mostrar los totales
         function actualizarTotales() {
             let totalDolares = 0;
-            
-            // Sumamos todos los subtotales del carrito
-            carrito.forEach(item => {
-                totalDolares += item.subtotal;
-            });
+            carrito.forEach(item => totalDolares += item.subtotal);
 
             const tasaBcv = parseFloat(document.getElementById('tasaBcv').value) || 0;
             const totalBolivares = totalDolares * tasaBcv;
 
-            document.getElementById('totales').innerHTML = `
-                Total USD: $${totalDolares.toFixed(2)} <br>
-                <span class="total-bs">Total Bs: ${totalBolivares.toFixed(2)}</span>
-            `;
+            document.getElementById('total-usd').innerText = totalDolares.toFixed(2);
+            document.getElementById('total-bs').innerText = totalBolivares.toFixed(2);
+            document.getElementById('mostrar-tasa').innerText = tasaBcv.toFixed(2);
         }
 
-        // Función para vaciar la cuenta para un nuevo cliente
         function limpiarCuenta() {
-            carrito = []; // Vaciamos el arreglo
+            carrito = [];
             mostrarCarrito();
             actualizarTotales();
+        }
+
+        // LA MAGIA DEL CAPTURE
+        function generarCapture() {
+            if (carrito.length === 0) {
+                alert("Agrega al menos un producto para generar la factura.");
+                return;
+            }
+
+            const zonaFactura = document.getElementById('zona-factura');
+            
+            // html2canvas toma la "foto"
+            html2canvas(zonaFactura, { backgroundColor: "#ffffff", scale: 2 }).then(canvas => {
+                // Crea un enlace invisible para descargar la imagen
+                const link = document.createElement('a');
+                link.download = 'Presupuesto_Limpieza.png'; // Nombre del archivo
+                link.href = canvas.toDataURL('image/png');
+                link.click(); // Simula el clic para descargar
+            });
         }
     </script>
 
 </body>
-
 </html>
-
