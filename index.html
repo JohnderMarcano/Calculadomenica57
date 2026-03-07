@@ -73,6 +73,10 @@
         .total-bs { color: #008c9e; font-size: 1.2em; display: block; margin-top: 5px; }
         
         .footer-factura { text-align: center; font-size: 0.8em; color: #888; margin-top: 15px; font-style: italic; }
+
+        /* Estilo para el Plan B del iPhone */
+        #resultado-imagen { display: none; margin-top: 25px; text-align: center; padding: 15px; background: #e9ecef; border-radius: 10px; }
+        #imagen-generada { max-width: 100%; border-radius: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -120,6 +124,12 @@
 
         <button class="btn-capture" onclick="compartirWhatsApp()">📲 Enviar al WhatsApp</button>
         <button class="btn-limpiar" onclick="limpiarCuenta()">🗑️ Nueva Venta (Borrar todo)</button>
+
+        <div id="resultado-imagen">
+            <p style="color: #d32f2f; font-weight: bold; margin-bottom: 5px;">Tu teléfono bloqueó el envío directo.</p>
+            <p style="font-size: 0.9em; margin-top: 0;">Mantén presionada la imagen de abajo y selecciona <b>"Compartir"</b> o "Copiar".</p>
+            <img id="imagen-generada" src="" alt="Factura Generada">
+        </div>
     </div>
 
     <script>
@@ -137,7 +147,6 @@
             const estadoApi = document.getElementById('estadoApi');
 
             try {
-                // Límite de 5 segundos para que no se quede pegado
                 const controlador = new AbortController();
                 const timeoutId = setTimeout(() => controlador.abort(), 5000);
 
@@ -152,7 +161,6 @@
                 estadoApi.style.color = "#28a745";
                 actualizarTotales(); 
             } catch (error) {
-                // Si falla o tarda mucho, lanza el error y deja que tu mamá la ingrese
                 estadoApi.innerHTML = "❌ Falló la conexión. Ingresa manual.";
                 estadoApi.style.color = "#dc3545";
                 inputTasa.placeholder = "Escribe la tasa aquí...";
@@ -213,6 +221,8 @@
             carrito = [];
             mostrarCarrito();
             actualizarTotales();
+            // Ocultar la imagen del Plan B si estaba visible
+            document.getElementById('resultado-imagen').style.display = 'none';
         }
 
         function compartirWhatsApp() {
@@ -227,10 +237,12 @@
             
             boton.innerText = "⏳ Preparando imagen...";
 
+            // Tomar la foto
             html2canvas(zonaFactura, { backgroundColor: "#ffffff", scale: 2 }).then(canvas => {
                 canvas.toBlob(function(blob) {
                     const archivo = new File([blob], "Presupuesto.png", { type: "image/png" });
 
+                    // Intentar el envío directo (Funciona perfecto en Android)
                     if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
                         navigator.share({
                             title: 'Presupuesto de Limpieza',
@@ -238,20 +250,30 @@
                         }).then(() => {
                             boton.innerText = textoOriginal;
                         }).catch((error) => {
-                            console.error('Error al compartir', error);
-                            boton.innerText = textoOriginal;
+                            console.error('El usuario canceló o el iPhone bloqueó:', error);
+                            // EL IPHONE BLOQUEÓ: Ejecutamos el Plan B
+                            mostrarPlanB(canvas, boton, textoOriginal);
                         });
                     } else {
-                        // Plan B
-                        alert("El envío directo no está soportado en este navegador. Se descargará la imagen.");
-                        const link = document.createElement('a');
-                        link.download = 'Presupuesto_Limpieza.png';
-                        link.href = canvas.toDataURL('image/png');
-                        link.click();
-                        boton.innerText = textoOriginal;
+                        // NAVEGADOR NO COMPATIBLE: Ejecutamos el Plan B
+                        mostrarPlanB(canvas, boton, textoOriginal);
                     }
                 }, 'image/png');
+            }).catch(() => {
+                alert("Error al generar la imagen.");
+                boton.innerText = textoOriginal;
             });
+        }
+
+        // Función del Plan B (Mostrar la imagen para mantener presionada)
+        function mostrarPlanB(canvas, boton, textoOriginal) {
+            const divImagen = document.getElementById('resultado-imagen');
+            const imgEtiqueta = document.getElementById('imagen-generada');
+            
+            imgEtiqueta.src = canvas.toDataURL('image/png'); // Le pasamos la foto generada
+            divImagen.style.display = 'block'; // Mostramos el cuadro
+            
+            boton.innerText = textoOriginal; // Restauramos el texto del botón
         }
     </script>
 
