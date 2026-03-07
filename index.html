@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Productos</title>
+    <title>Calculadora de Limpieza</title>
     <link rel="icon" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#00a8cc">
@@ -15,7 +15,7 @@
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             padding: 15px; 
-            background-color: #e0f7fa; /* Fondo azul clarito de limpieza */
+            background-color: #e0f7fa; 
             color: #333;
             margin: 0;
         }
@@ -52,14 +52,13 @@
         
         .estado-api { font-size: 0.8em; margin-top: 5px; text-align: right; font-weight: bold; }
 
-        /* --- ZONA DEL RECIBO (Lo que saldrá en la foto) --- */
+        /* --- ZONA DEL RECIBO --- */
         #zona-factura {
             margin-top: 30px;
             padding: 20px;
             background-color: #fff;
             border: 1px solid #ddd;
             border-radius: 8px;
-            /* Le damos un toque de "ticket" con sombra interna */
             box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
             position: relative;
         }
@@ -73,14 +72,13 @@
         .totales-factura { margin-top: 15px; border-top: 2px dashed #ccc; padding-top: 15px; text-align: right; font-size: 1.2em; font-weight: bold; color: #222; }
         .total-bs { color: #008c9e; font-size: 1.2em; display: block; margin-top: 5px; }
         
-        /* Mensaje de gracias */
         .footer-factura { text-align: center; font-size: 0.8em; color: #888; margin-top: 15px; font-style: italic; }
     </style>
 </head>
 <body>
 
     <div class="contenedor">
-        <h2>✨ Productos de Limpieza ✨</h2>
+        <h2>✨ Productos de Limpieza</h2>
 
         <label for="tasaBcv">Tasa BCV (Bs/$):</label>
         <input type="number" id="tasaBcv" step="0.01" placeholder="Cargando tasa..." onchange="actualizarTotales()">
@@ -103,7 +101,7 @@
 
         <div id="zona-factura">
             <div class="header-factura">
-                <h3>Total</h3>
+                <h3>Presupuesto</h3>
                 <p id="fecha-hoy">Fecha: --/--/----</p>
                 <p style="font-size: 0.85em; color:#008c9e;">Tasa BCV calculada: Bs. <span id="mostrar-tasa">0.00</span></p>
             </div>
@@ -127,10 +125,9 @@
     <script>
         let carrito = [];
 
-        // Poner la fecha de hoy automáticamente
         function ponerFecha() {
             const hoy = new Date();
-            const fechaFormateada = hoy.toLocaleDateString('es-VE'); // Formato día/mes/año
+            const fechaFormateada = hoy.toLocaleDateString('es-VE'); 
             document.getElementById('fecha-hoy').innerText = `Fecha: ${fechaFormateada}`;
         }
         ponerFecha();
@@ -140,7 +137,13 @@
             const estadoApi = document.getElementById('estadoApi');
 
             try {
-                const respuesta = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+                // Límite de 5 segundos para que no se quede pegado
+                const controlador = new AbortController();
+                const timeoutId = setTimeout(() => controlador.abort(), 5000);
+
+                const respuesta = await fetch('https://ve.dolarapi.com/v1/dolares/oficial', { signal: controlador.signal });
+                clearTimeout(timeoutId);
+
                 if (!respuesta.ok) throw new Error('Error de red');
                 const datos = await respuesta.json();
                 
@@ -149,8 +152,10 @@
                 estadoApi.style.color = "#28a745";
                 actualizarTotales(); 
             } catch (error) {
-                estadoApi.innerHTML = "❌ Ingresa manual";
+                // Si falla o tarda mucho, lanza el error y deja que tu mamá la ingrese
+                estadoApi.innerHTML = "❌ Falló la conexión. Ingresa manual.";
                 estadoApi.style.color = "#dc3545";
+                inputTasa.placeholder = "Escribe la tasa aquí...";
             }
         }
 
@@ -210,7 +215,6 @@
             actualizarTotales();
         }
 
-// LA MAGIA DEL CAPTURE DIRECTO AL TELÉFONO
         function compartirWhatsApp() {
             if (carrito.length === 0) {
                 alert("Agrega al menos un producto para generar la factura.");
@@ -219,49 +223,37 @@
 
             const zonaFactura = document.getElementById('zona-factura');
             const boton = document.querySelector('.btn-capture');
+            const textoOriginal = boton.innerText;
             
-            // Cambiamos el texto del botón temporalmente para que sepa que está cargando
             boton.innerText = "⏳ Preparando imagen...";
 
-            // html2canvas toma la "foto"
             html2canvas(zonaFactura, { backgroundColor: "#ffffff", scale: 2 }).then(canvas => {
-                
-                // Convertimos el canvas en un archivo de imagen real
                 canvas.toBlob(function(blob) {
-                    const archivo = new File([blob], "Presupuesto_Limpieza.png", { type: "image/png" });
+                    const archivo = new File([blob], "Presupuesto.png", { type: "image/png" });
 
-                    // Verificamos si el celular de tu mamá soporta compartir archivos directamente
                     if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
-                        
-                        // Abre el menú de compartir del teléfono
                         navigator.share({
                             title: 'Presupuesto de Limpieza',
                             files: [archivo]
                         }).then(() => {
-                            // Si se compartió con éxito, restauramos el botón
-                            boton.innerText = "📲 Enviar al WhatsApp";
+                            boton.innerText = textoOriginal;
                         }).catch((error) => {
                             console.error('Error al compartir', error);
-                            boton.innerText = "📲 Enviar al WhatsApp";
+                            boton.innerText = textoOriginal;
                         });
-
                     } else {
-                        // Plan B: Si está en una computadora vieja que no soporta compartir, lo descarga
-                        alert("Tu navegador no soporta envío directo. Se descargará la imagen.");
+                        // Plan B
+                        alert("El envío directo no está soportado en este navegador. Se descargará la imagen.");
                         const link = document.createElement('a');
                         link.download = 'Presupuesto_Limpieza.png';
                         link.href = canvas.toDataURL('image/png');
                         link.click();
-                        boton.innerText = "📲 Enviar al WhatsApp";
+                        boton.innerText = textoOriginal;
                     }
                 }, 'image/png');
-            });
-        }
             });
         }
     </script>
 
 </body>
 </html>
-
-
